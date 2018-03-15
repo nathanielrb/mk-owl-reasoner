@@ -1,6 +1,18 @@
-(use mini-kanren)
+(use posix)
+
+;; (use mini-kanren)
+;; !!!
+(change-directory "miniKanren-with-symbolic-constraints")
+(load "mk-chicken.scm")
+(change-directory "..")
 
 (load "definitions.scm")
+
+(define (membero a l)
+  (fresh (x rest)
+         (== l `(,x . ,rest)) 
+         (conde ((== a x))
+                ((membero a rest)))))
 
 (define (policyo P)
   (fresh (a b c)
@@ -24,7 +36,7 @@
            (=/= q r)
            (== a `(∨ ,q ,r))
            (subclasso q b)
-           (subclasso r b)))
+           (subclasso r b))) ; + absento
 
          ;; ((fresh (q r)
          ;;   (=/= q r)
@@ -43,12 +55,13 @@
            (=/= q r)
            (== b `(∧ ,q ,r))
            (subclasso a q)
-           (subclasso a r)))
+           (subclasso a r))) ;  + absento
 
          ((fresh (x)
            (subclasso a x)
            (subclasso x b)))
-         ;;((== a b))))
+
+         ((== a b))))
          ))
          
 
