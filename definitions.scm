@@ -10,18 +10,24 @@
     (hash-table-set! subclass-reverse-index b
                      (cons a (hash-table-ref/default subclass-reverse-index b '())))))
 
+
 (define (membero a l)
   (fresh (x rest)
          (== l `(,x . ,rest)) 
          (conde ((== a x))
                 ((membero a rest)))))
 
+(define (rembero a lst rst)
+  (fresh (x rest)
+   (== lst `(,x . ,rest)) 
+   (conde ((== a x) (== rest rst))
+	  ((fresh (rrst)
+	    (== rst `(,x . ,rrst))
+	    (rembero a rest rrst))))))
+
 
 (define (literal-subclasso a b)
   (conde ((== a b))
-         ;; ((fresh (q)
-           ;;(=/= a q) (=/= q b)
-           ;; (literal-subclasso a q) (literal-subclasso q b)))
          ((fresh (x y)
            (== a x) (== b y)
            (project (x y)
@@ -156,3 +162,12 @@
 ;; (define types `((spl:hasData ,datatypes)
 ;;                 (spl:hasPurpose ,purposes)
 ;;                 (spl:hasProcessing ,operations)))
+
+
+
+(define Implications '())
+
+
+;; (run 1 (q) (subclasso
+;; 	    (make-policy 'spl:LocationData 'svl:BE 'spl:Marketing 'spl:aggregate) 
+;; 	    (make-policy 'spl:LocationData 'svl:BE 'spl:Marketing 'spl:AnyProcessing)  ))

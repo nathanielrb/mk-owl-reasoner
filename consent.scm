@@ -6,7 +6,15 @@
 (load "mk-chicken.scm")
 (change-directory "..")
 
+(define (make-policy a b c d)
+  `(ObjectIntersectionOf (ObjectSomeValuesFrom  spl:hasData ,a)
+     (ObjectIntersectionOf (ObjectSomeValuesFrom spl:hasLocation ,b)
+      (ObjectIntersectionOf (ObjectSomeValuesFrom spl:hasPurpose ,c)
+         (ObjectSomeValuesFrom spl:hasProcessing ,d))))) ; (Storage s1 s2)
+
+
 (load "definitions.scm")
+
 
 (define (policyo P)
   (fresh (a b c d)
@@ -19,13 +27,8 @@
 ;; (define (simplify-policy P)
 
 
-(define (make-policy a b c d)
-  `(ObjectIntersectionOf (ObjectSomeValuesFrom  spl:hasData ,a)
-     (ObjectIntersectionOf (ObjectSomeValuesFrom spl:hasLocation ,b)
-      (ObjectIntersectionOf (ObjectSomeValuesFrom spl:hasPurpose ,c)
-         (ObjectSomeValuesFrom spl:hasProcessing ,d))))) ; (Storage s1 s2)
 
-(define (subclasso a b)
+(define (subclasso a b #!optional (Implications Implications))
 
   (conde ((symbolo a) (symbolo b) (literal-subclasso a b))
 
@@ -40,31 +43,6 @@
              (== a `(ObjectSomeValuesFrom ,pred ,x))
              (== b `(ObjectSomeValuesFrom ,pred ,y))
              (subclasso x y)))
-
-;;          ((fresh (q r)
-;;            (== b `(Implies ,q ,r))
-;; (project (r) (begin (print "IMPLIES " r "\n\n") (== q q)))
-;;            (subclasso a `(ObjectUnionOf ,r (Not ,q)))))
-
-         ((fresh (q r)
-           (== b `(Implies ,q ,r))
-           (project (r) (begin (print "IMPLIES " r "\n\n") (== q q)))
-           (subclasso a q)
-
-         ((fresh (pred q)
-           (== b `(Not (ObjectSomeValuesFrom ,pred ,q)))
-(project (a q) (begin (print "NOT VALS:  " a " / " q "\n\n") (== q q)))
-           (not-subclasso a `(ObjectSomeValues ,pred q))))
-
-         ((fresh (q r)
-           (== b `(Not (ObjectIntersectionOf ,q ,r)))
-(project (q) (begin (print "NOT INT " q "\n\n") (== q q)))
-           (subclasso a `(ObjectUnionOf (Not ,q) (Not ,r)))))
-
-         ((fresh (q r)
-           (== b `(Not (ObjectUnionOf ,q ,r)))
-(project (q) (begin (print "NOT UNION" q "\n\n") (== q q)))
-           (subclasso a `(ObjectIntersectionOf (Not ,q) (Not ,r)))))
 
          ;; A∨B < C
          ;; constrain not A<B...
@@ -84,7 +62,7 @@
           (=/= q 'spl:Null)
           (=/= r 'spl:Null)
           (=/= q r)
-          (project (a q r) (begin (print "UNION " a "\n" q "\n" r "\n\n") (== q q)))
+          ;;(project (a q r) (begin (print "UNION " a "\n" q "\n" r "\n\n") (== q q)))
           (conde ((subclasso a q))      ; correct?
                  ((subclasso a r))
                  ((fresh (x y)
@@ -117,7 +95,18 @@
             (subclasso r b2))))
 
 
+	 ((fresh (q r remaining-implications)
+	   ;;(implieso/literal q r Implications remaining-implications) ;; NOT CDR!!!!!!!
+	   (rembero `(Implies ,q ,r) Implications remaining-implications)
+	   (subclasso q b remaining-implications)
+	   (subclasso a r remaining-implications)))
+
          ))  
+
+(define (implieso/literal0 a b Implications remaining-implications)
+  (rembero `(Implies ,a ,b) Implications remaining-implications))
+
+
 
 (define (not-subclasso a b)
   (conde ((symbolo a) (symbolo b) (literal-not-subclasso a b))
@@ -173,19 +162,7 @@
 
 (define pps print-policy-short)
 
-(define Belgian-Laws
-  `(Implies ,(make-policy 'spl:LocationData 'svl:Be 'spl:Null 'spl:AnyProcessing)
-            ,(make-policy 'spl:LocationData 'svl:Be 'spl:Marketing 'spl:AnyProcessing)))
-
-(define User-Policy1 (make-policy '(ObjectUnionOf spl:LocationData spl:NavigationData) 
-                                  'svl:EU
-                                  'spl:Charity 'spl:AnyProcessing))
-
-(define User-Policy2 (make-policy 'spl:LocationData 'svl:EU 'spl:Charity 'spl:aggregate))
-
-(define ACME-Policy (make-policy 'spl:LocationData 'svl:BE
-                                 'spl:Marketing 'spl:aggregate))
-
-(define NICE-Policy (make-policy 'spl:LocationData 'svl:BE 'spl:Charity 'spl:aggregate))
 
 ;; (map print-policy-short (run 30 (P) (policyo P) (subclasso (make-policy '(ObjectUnionOf spl:PersonalData spl:LocationData) 'ex:Painting 'spl:archive) P)))
+
+(load "examples.scm")
