@@ -18,12 +18,11 @@
 ;(map pps
 ;; (map pps (run 40 (P) (subclasso ACME-Policy P)))
 
-(map pps (run 10 (x)
+(map pps (run 1 (x)
           (fresh (P Q)
            (== x `(ObjectUnionOf ,P ,Q))
            (policyo P)
-           (policyo Q)
-           (subclasso x `(ObjectSomeValuesFrom spl:hasLocation svl:EU))
-
-           ;; (subclasso Q `(ObjectSomeValuesFrom spl:hasPurpose spl:Charity))
+          (policyo Q)
+           (subclasso P `(ObjectSomeValuesFrom spl:hasLocation svl:EU))
+;           (subclasso Q `(ObjectSomeValuesFrom spl:hasPurpose spl:Charity))
            (subclasso ACME-Policy x))))

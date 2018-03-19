@@ -6,7 +6,10 @@
 ;; (include "mk-chicken.scm")
 ;; (change-directory "..")
 
-(include "mk-chicken.scm")
+;; (include "fmk-chicken.scm")
+;; (include "fmk.scm")
+
+ (include "mk-chicken.scm")
 
 (define (make-policy a b c d)
   `(ObjectIntersectionOf (ObjectSomeValuesFrom  spl:hasData ,a)
