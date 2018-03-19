@@ -25,7 +25,6 @@
 	    (== rst `(,x . ,rrst))
 	    (rembero a rest rrst))))))
 
-
 (define (literal-subclasso a b)
   (conde ((== a b))
          ((fresh (x y)
@@ -53,27 +52,43 @@
                                                 (=/= q a)
                                                 (literal-subclasso a q))))))   ))))))
 
+;; (define (literal-not-subclasso a b)
+;;   (conde ;((fresh (q) (symbolo q) (literal-subclasso a q) (literal-subclasso q b)))
+;;          ((fresh (x y)
+;;            (== a x) (== b y)
+;;            (project (x y)
+;;             (cond ((and (symbol? x) (symbol? y))
+;;                    (if (member b (hash-table-ref/default subclass-index a '()))
+;;                        fail
+;;                        succeed))
+;;                   ((symbol? x) (let rec ((elts (hash-table-ref/default subclass-index x '())))
+;;                                  (if (null? rec) succeed
+;;                                      (conde ((=/= b (car elts)))
+;;                                             (rec (cdr elts))))))
+;;                   ((symbol? y) (let rec ((elts (hash-table-ref/default subclass-reverse-index y '())))
+;;                                  (if (null? rec) succeed
+;;                                      (conde ((=/= a (car elts)))
+;;                                             (rec (cdr elts))))))))))  ))
+
 (define (literal-not-subclasso a b)
-  (conde ((== a b))
-         ((fresh (q) (symbolo q) (literal-subclasso a q) (literal-subclasso q b)))
-         (
   (fresh (x y)
+   (=/= a b)
    (== a x) (== b y)
    (project (x y)
     (cond ((and (symbol? x) (symbol? y))
-           (if (member b (hash-table-ref/default subclass-index a '()))
+           (if (member y (hash-table-ref/default subclass-index x '()))
                fail
                succeed))
           ((symbol? x) (let rec ((elts (hash-table-ref/default subclass-index x '())))
-                         (if (null? rec) succeed
-                             (conde ((=/= b (car elts)))
-                                    (rec (cdr elts))))))
+                         (if (null? elts) 
+                             succeed
+                             (conde ((=/= b (car elts))
+                                     (rec (cdr elts)))))))
           ((symbol? y) (let rec ((elts (hash-table-ref/default subclass-reverse-index y '())))
-                           (if (null? rec) succeed
-                             (conde ((=/= a (car elts)))
-                                    (rec (cdr elts))))))))))  )) 
-         
-
+                         (if (null? elts) 
+                             succeed
+                             (conde ((=/= a (car elts))
+                                     (rec (cdr elts)))))))))))
 
 (define subclasses
   '(;(spl:AnyRecipient top)

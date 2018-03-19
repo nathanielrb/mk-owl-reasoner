@@ -2,9 +2,11 @@
 
 ;; (use mini-kanren)
 ;; !!!
-(change-directory "miniKanren-with-symbolic-constraints")
-(load "mk-chicken.scm")
-(change-directory "..")
+;; (change-directory "miniKanren-with-symbolic-constraints")
+;; (include "mk-chicken.scm")
+;; (change-directory "..")
+
+(include "mk-chicken.scm")
 
 (define (make-policy a b c d)
   `(ObjectIntersectionOf (ObjectSomeValuesFrom  spl:hasData ,a)
@@ -13,20 +15,15 @@
          (ObjectSomeValuesFrom spl:hasProcessing ,d))))) ; (Storage s1 s2)
 
 
-(load "definitions.scm")
+(include "definitions.scm")
 
-
+;; or Union or Intersection of Policies
 (define (policyo P)
   (fresh (a b c d)
    (== P `(ObjectIntersectionOf (ObjectSomeValuesFrom spl:hasData ,a)
              (ObjectIntersectionOf (ObjectSomeValuesFrom spl:hasLocation ,b)
                (ObjectIntersectionOf (ObjectSomeValuesFrom spl:hasPurpose ,c)
                 (ObjectSomeValuesFrom spl:hasProcessing ,d))))))) ; (Storage s1 s2)
-
-;; clean up (U (U (U ...)))
-;; (define (simplify-policy P)
-
-
 
 (define (subclasso a b #!optional (Implications Implications))
 
@@ -44,21 +41,10 @@
              (== b `(ObjectSomeValuesFrom ,pred ,y))
              (subclasso x y)))
 
-         ;; A∨B < C
-         ;; constrain not A<B...
-         ((fresh (q r)
-          (== a `(ObjectUnionOf ,q ,r))
-          (=/= q 'spl:Null)
-          (=/= r 'spl:Null)
-          (=/= q r)
-          (subclasso q b)
-          (subclasso r b)))
-
          ;; A < B∨C 
          ;; constrain not B<C...
          ((fresh (q r)
           (== b `(ObjectUnionOf ,q ,r))
-
           (=/= q 'spl:Null)
           (=/= r 'spl:Null)
           (=/= q r)
@@ -71,7 +57,18 @@
                    (subclasso x q)
                    (subclasso y r))))))
 
-         ;; A < B∧C
+         ;; A∨B < C
+         ;; constrain not A<B...
+         ((fresh (q r)
+          (== a `(ObjectUnionOf ,q ,r))
+          (=/= q 'spl:Null)
+          (=/= r 'spl:Null)
+          (=/= q r)
+          (subclasso q b)
+          (subclasso r b)))
+
+
+         ;; A < B = Q∧R
          ;; constrain not A<B...
          ((fresh (q r)
           (== b `(ObjectIntersectionOf ,q ,r))
@@ -81,19 +78,18 @@
           (subclasso a q)
           (subclasso a r)))
 
-         ;; A∧B < C 
+         ;; A = Q∧R < B
          ((fresh (q r)
            (== a `(ObjectIntersectionOf ,q ,r))
-          (=/= q r)
-          ;;  (=/= q r)
-          ;; (=/= q 'spl:Null)
-          ;; (=/= r 'spl:Null)
-           (fresh (b1 b2)
-            (== b `(ObjectIntersectionOf ,b1 ,b2))
-            (=/= b1 b2)
-            (subclasso q b1)
-            (subclasso r b2))))
-
+;           (not-subclasso q r)
+           (=/= q r)
+           (conde ((subclasso q b))
+                  ((subclasso r b))
+                  ((fresh (s t)
+                    (== b `(ObjectIntersectionOf ,s ,t))
+                    (=/= s t)
+                    (subclasso q s)
+                    (subclasso r t))))))
 
 	 ((fresh (q r remaining-implications)
 	   ;;(implieso/literal q r Implications remaining-implications) ;; NOT CDR!!!!!!!
@@ -109,24 +105,45 @@
 
 
 (define (not-subclasso a b)
-  (conde ((symbolo a) (symbolo b) (literal-not-subclasso a b))
+  (conde ((=/= a b)
+          (=/= a 'spl:Null)
 
-         ;; ((symbolo a) (symbolo b) (== a b))
+          (conde ((symbolo a) (symbolo b) (literal-not-subclasso a b))
+         
+                 ((fresh (pred x y)
+                   (== a `(ObjectSomeValuesFrom ,pred ,x))
+                   (== b `(ObjectSomeValuesFrom ,pred ,y))
+                   (not-subclasso x y)
+     ;; (project (x y) (begin (print "Yo: " (run* (p) (literal-not-subclasso x y))) ;"YO: " x " + " y)
+     ;;                  (== 1 1)))
+     ))
 
-         ((== a 'spl:Null))
+                 ;; sufficient but not necessary, and then...
 
-         ((fresh (pred x y)
-             (== a `(ObjectSomeValuesFrom ,pred ,x))
-             (== b `(ObjectSomeValuesFrom ,pred ,y))
-             (not-subclasso x y)))
+                 ((fresh (q r)
+                         (== a `(ObjectIntersectionOf ,q ,r))
+                         (=/= a b)
+                         (conde ((not-subclasso q b))
+                                ((not-subclasso r b)))))
 
-         ((fresh (q r)
-           (== a `(ObjectIntersectionOf ,q ,r))
-           (conde ((not-subclasso q b))
-                  ((not-subclasso r b)))))
+                 ((fresh (q r)
+                         (== b `(ObjectIntersectionOf ,q ,r))
+                         (=/= a b)
+                         (conde ((not-subclasso a q))
+                                ((not-subclasso a r)))))
 
-         ;; Union...
-         ))
+                ((fresh (q r)
+                         (== a `(ObjectUnionOf ,q ,r))
+                         (=/= a b)
+                         (conde ((not-subclasso q b)
+                                 (not-subclasso r b)))))
+
+                ((fresh (q r)
+                         (== b `(ObjectUnionOf ,q ,r))
+                         (=/= a b)
+                         (conde ((not-subclasso a q)
+                                 (not-subclasso a r)))))
+         ))))
 
 (define (print-policy P)
   (print
@@ -138,7 +155,10 @@
 
 (define (print-policy-short P)
   (print
-   (let rec ((P P) (n 0))
+   (let rec ((P (if (or (symbol? P)
+                        (and (list? P) (symbol? (car P))))
+                    P (car P))) ; how to print constraints?
+             (n 0))
      (cond ((symbol? P) (format #f "~A" (case P
                                          ((ObjectIntersectionOf) "∧")
                                          ((ObjectUnionOf) "∨")
@@ -158,11 +178,12 @@
                         ((Implies) (format #f "~%~A~A~%~A=>~A"
                                            space (rec (cadr P) (+ n 1))
                                            space  (rec (caddr P) (+ n 1)))))))
-           ))))
+           )))
+  (when (and (list? P) (list? (car P)))
+        (print "Constraints: " (cadr P))))
 
 (define pps print-policy-short)
 
 
 ;; (map print-policy-short (run 30 (P) (policyo P) (subclasso (make-policy '(ObjectUnionOf spl:PersonalData spl:LocationData) 'ex:Painting 'spl:archive) P)))
 
-(load "examples.scm")

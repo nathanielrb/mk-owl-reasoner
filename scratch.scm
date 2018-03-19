@@ -22,3 +22,18 @@
 	 ;;            (== b `(Not (ObjectUnionOf ,q ,r)))
 	 ;; (project (q) (begin (print "NOT UNION" q "\n\n") (== q q)))
 	 ;;            (subclasso a `(ObjectIntersectionOf (Not ,q) (Not ,r)))))
+
+
+
+         ((fresh (q r)
+           (== b `(Implies ,q ,r))
+           (project (q r) (begin (print "right IMPLIES " q "\n\n") (== q q)))
+           (subclasso a `(ObjectUnionOf ,r (Not ,q)))))
+
+         ((fresh (q r)
+           (== a `(Implies ,q ,r))
+           (project (q r) (begin (print "left IMPLIES " q "\n\n") (== q q)))
+           (subclasso `(ObjectUnionOf ,r (Not ,q)) b)))
+           ;;(subclasso b `(ObjectUnionOf ,r (Not ,q)))))
+           ;;(conde ((subclass b r)
+
